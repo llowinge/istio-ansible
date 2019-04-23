@@ -1,0 +1,24 @@
+---
+# This playbook deploys the whole application stack in this site.
+
+- hosts: masters
+  remote_user: root
+  tasks:
+    - name: Check master needs setup
+      stat: path="/etc/origin/master/master-config.yaml.prepatch"
+      register: prepatch
+
+- name: setup masters
+  hosts: masters
+  remote_user: root
+
+  roles:
+    - role: master-setup 
+      when: not prepatch.stat.exists
+
+- name: setup nodes
+  hosts: nodes
+  remote_user: root
+
+  roles:
+    - node-setup

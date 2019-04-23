@@ -1,0 +1,30 @@
+---
+
+- name: check if user is cluster admin
+  shell: "oc get project default"
+  register: default_project_result
+  ignore_errors: true
+  changed_when: false
+
+- fail:
+    msg: "User does not have cluster-admin rights to install Istio"
+  when: default_project_result is failed
+
+- name: Download master-config.patch
+  get_url:
+    url: https://raw.githubusercontent.com/Maistra/openshift-ansible/{{ maistra_version }}/istio/master-config.patch
+    dest: /etc/origin/master/master-config.patch
+
+- name: Make copy of the patch file
+  shell: "cp -p /etc/origin/master/master-config.yaml /etc/origin/master/master-config.yaml.prepatch"
+
+- name: Save master patch
+  shell: "cat /etc/origin/master/master-config.patch"
+  register: master_patch
+  changed_when: false
+
+- name: Patch the master config 
+  shell: "oc ex config patch /etc/origin/master/master-config.yaml.prepatch -p \"{{ master_patch.stdout }}\" > /etc/origin/master/master-config.yaml"
+
+- name: Restart Openshift 
+  shell: "/usr/local/bin/master-restart api && /usr/local/bin/master-restart controllers"
